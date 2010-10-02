@@ -1,0 +1,41 @@
+name:                ssh
+version:             0.1
+synopsis:            A pure-Haskell SSH server library.
+-- description:         
+homepage:            http://darcsden.com/alex/ssh
+license:             BSD3
+license-file:        LICENSE
+author:              Alex Suraci
+maintainer:          i.am@toogeneric.com
+category:            Network
+build-type:          Simple
+cabal-version:       >=1.2
+
+
+library
+  hs-source-dirs:   src
+
+  exposed-modules:  SSH,
+                    SSH.Channel,
+                    SSH.Crypto,
+                    SSH.NetReader,
+                    SSH.Packet,
+                    SSH.Sender,
+                    SSH.Session
+
+  other-modules:    SSH.Debug,
+                    SSH.Util
+  
+  build-depends:    base >= 4 && < 5,
+                    binary,
+                    bytestring,
+                    Crypto,
+                    containers,
+                    HsOpenSSL >= 0.8,
+                    network,
+                    process,
+                    RSA,
+                    random,
+                    SHA,
+                    split,
+                    transformers
