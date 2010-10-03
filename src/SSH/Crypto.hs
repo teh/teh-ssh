@@ -71,6 +71,14 @@ toBlocks bs m = b : rest
 fromBlocks :: Integral a => Int -> [a] -> LBS.ByteString
 fromBlocks bs = LBS.concat . map (LBS.pack . i2osp bs)
 
+modexp :: Integer -> Integer -> Integer -> Integer
+modexp x e n = modexp' x e n 1
+  where
+    modexp' _ 0 _ y = y
+    modexp' z e n y
+        | e `mod` 2 == 1 = modexp' ((z ^ 2) `mod` n) (e `div` 2) n (y * z `mod` n)
+        | otherwise = modexp' ((z ^ 2) `mod` n) (e `div` 2) n y
+
 blob :: PublicKey -> LBS.ByteString
 blob (RSAPublicKey e n) = doPacket $ do
     string "ssh-rsa"

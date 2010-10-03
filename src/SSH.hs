@@ -8,8 +8,8 @@ import Data.Digest.Pure.SHA (bytestringDigest, sha1)
 import Data.HMAC (hmac_md5, hmac_sha1)
 import Data.List (intercalate)
 import Data.List.Split (splitOn)
-import OpenSSL.BN
 import Network
+import OpenSSL.BN (randIntegerOneToNMinusOne)
 import System.IO
 import System.Random
 import qualified Data.ByteString.Lazy as LBS
