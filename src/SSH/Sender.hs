@@ -1,18 +1,19 @@
 module SSH.Sender where
 
-import Codec.Encryption.Modes
 import Control.Concurrent.Chan
 import Control.Monad (replicateM)
 import Data.LargeWord
 import Data.Word
 import System.IO
 import System.Random
-import qualified Codec.Encryption.AES as A
+import qualified Codec.Crypto.SimpleAES as A
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import SSH.Debug
 import SSH.Crypto
 import SSH.Packet
+import SSH.Util
 
 
 data SenderState
@@ -25,13 +26,13 @@ data SenderState
         , senderOutSeq :: Word32
         , senderEncrypting :: Bool
         , senderCipher :: Cipher
-        , senderKey :: Integer
-        , senderVector :: Integer
+        , senderKey :: BS.ByteString
+        , senderVector :: BS.ByteString
         , senderHMAC :: HMAC
         }
 
 data SenderMessage
-    = Prepare Cipher Integer Integer HMAC
+    = Prepare Cipher BS.ByteString BS.ByteString HMAC
     | StartEncrypting
     | Send LBS.ByteString
 
@@ -100,17 +101,12 @@ sender ms ss = do
             then paddingNeeded msg + fromIntegral blockSize
             else paddingNeeded msg
 
-encrypt :: Cipher -> Integer -> Integer -> LBS.ByteString -> (LBS.ByteString, Integer)
+encrypt :: Cipher -> BS.ByteString -> BS.ByteString -> LBS.ByteString -> (LBS.ByteString, BS.ByteString)
 encrypt (Cipher AES CBC bs ks) key vector m =
-    ( fromBlocks bs encrypted
+    ( fromBlocks encrypted
     , case encrypted of
-          (_:_) -> fromIntegral $ last encrypted
+          (_:_) -> strictLBS (last encrypted)
           [] -> error ("encrypted data empty for `" ++ show m ++ "' in encrypt") vector
     )
   where
-    ksCbc =
-        case ks of
-            16 -> cbc A.encrypt (fromIntegral vector) (fromIntegral key :: Word128)
-            24 -> cbc A.encrypt (fromIntegral vector) (fromIntegral key :: Word192)
-            32 -> cbc A.encrypt (fromIntegral vector) (fromIntegral key :: Word256)
-    encrypted = ksCbc (toBlocks bs m)
+    encrypted = toBlocks bs $ A.crypt A.CBC key vector A.Encrypt m

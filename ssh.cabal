@@ -37,17 +37,20 @@ library
 
   other-modules:    SSH.Debug,
                     SSH.Util
-  
+
   build-depends:    base >= 4 && < 5,
                     binary,
                     bytestring,
-                    Crypto,
+                    cereal,
                     containers,
+                    crypto-api,
+                    cryptohash,
                     HsOpenSSL >= 0.8,
                     network,
                     process,
                     RSA,
                     random,
                     SHA,
+                    SimpleAES,
                     split,
                     transformers

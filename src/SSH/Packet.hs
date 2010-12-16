@@ -1,6 +1,5 @@
 module SSH.Packet where
 
-import Codec.Utils (fromOctets, i2osp)
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer
 import Data.Binary (encode)

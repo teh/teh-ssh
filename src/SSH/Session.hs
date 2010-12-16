@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module SSH.Session where
 
-import Codec.Encryption.Modes
 import Control.Concurrent.Chan
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
@@ -9,7 +8,8 @@ import Data.Binary (decode, encode)
 import Data.LargeWord
 import Data.Word
 import System.IO
-import qualified Codec.Encryption.AES as A
+import qualified Codec.Crypto.SimpleAES as A
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
 
@@ -19,6 +19,7 @@ import SSH.Debug
 import SSH.NetReader
 import SSH.Packet
 import SSH.Sender
+import SSH.Util
 
 
 type Session = StateT SessionState IO
@@ -61,8 +62,8 @@ data SessionState
         , ssInSeq :: Word32
         , ssInCipher :: Cipher
         , ssInHMAC :: HMAC
-        , ssInKey :: Integer
-        , ssInVector :: Integer
+        , ssInKey :: BS.ByteString
+        , ssInVector :: BS.ByteString
         , ssUser :: Maybe String
         }
 
@@ -120,20 +121,16 @@ decrypt m
     s <- get
     case s of
         Final
-            { ssInCipher = Cipher AES CBC bs ks
+            { ssInCipher = Cipher AES CBC bs@16 ks
             , ssInKey = key
             , ssInVector = vector
             } -> do
                 let blocks = toBlocks bs m
-                    ksUnCbc =
-                        case ks of
-                            16 -> unCbc A.decrypt (fromIntegral vector) (fromIntegral key :: Word128)
-                            24 -> unCbc A.decrypt (fromIntegral vector) (fromIntegral key :: Word192)
-                            32 -> unCbc A.decrypt (fromIntegral vector) (fromIntegral key :: Word256)
-                    decrypted = ksUnCbc blocks
+                    decrypted =
+                      A.crypt A.CBC key vector A.Decrypt m
 
-                modify (\ss -> ss { ssInVector = fromIntegral $ last blocks })
-                return (fromBlocks bs decrypted)
+                modify (\ss -> ss { ssInVector = strictLBS $ last blocks })
+                return decrypted
         _ -> error "no decrypt for current state"
 
 getPacket :: Session ()
@@ -158,12 +155,21 @@ getPacket = do
                 dump ("got packet", is, first, packetLen, paddingLen)
 
                 restEnc <- liftIO $ LBS.hGet h (fromIntegral packetLen - firstChunk + 4)
+
+                dump ("got rest", restEnc)
+
                 rest <- decrypt restEnc
 
+                dump ("decrypted", rest)
                 let decrypted = first `LBS.append` rest
                     payload = extract packetLen paddingLen decrypted
 
+                dump ("getting hmac", ms)
+
                 mac <- liftIO $ LBS.hGet h ms
+
+                dump ("got mac", mac, decrypted, is)
+                dump ("hmac'd", f decrypted)
                 dump ("got mac, valid?", verify mac is decrypted f)
 
                 modify (\ss -> ss { ssPayload = payload })

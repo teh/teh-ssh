@@ -1,6 +1,5 @@
 module SSH.Crypto where
 
-import Codec.Utils (fromOctets, i2osp)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.State
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
@@ -11,7 +10,7 @@ import qualified OpenSSL.DSA as DSA
 
 import SSH.Packet
 import SSH.NetReader
-import SSH.Util (strictLBS)
+import SSH.Util
 
 data Cipher =
     Cipher
@@ -54,22 +53,21 @@ data KeyPair
         }
     deriving (Eq, Show)
 
-
 generator :: Integer
 generator = 2
 
 safePrime :: Integer
 safePrime = 179769313486231590770839156793787453197860296048756011706444423684197180216158519368947833795864925541502180565485980503646440548199239100050792877003355816639229553136239076508735759914822574862575007425302077447712589550957937778424442426617334727629299387668709205606050270810842907692932019128194467627007
 
-toBlocks :: (Integral a, Integral b) => a -> LBS.ByteString -> [b]
+toBlocks :: (Integral a) => a -> LBS.ByteString -> [LBS.ByteString]
 toBlocks _ m | m == LBS.empty = []
 toBlocks bs m = b : rest
   where
-    b = fromOctets (256 :: Integer) (LBS.unpack (LBS.take (fromIntegral bs) m))
+    b = LBS.take (fromIntegral bs) m
     rest = toBlocks bs (LBS.drop (fromIntegral bs) m)
 
-fromBlocks :: Integral a => Int -> [a] -> LBS.ByteString
-fromBlocks bs = LBS.concat . map (LBS.pack . i2osp bs)
+fromBlocks :: [LBS.ByteString] -> LBS.ByteString
+fromBlocks = LBS.concat
 
 modexp :: Integer -> Integer -> Integer -> Integer
 modexp x e n = modexp' x e n 1

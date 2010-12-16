@@ -5,15 +5,19 @@ import Control.Concurrent.Chan
 import Control.Monad (replicateM)
 import Control.Monad.Trans.State
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
-import Data.HMAC (hmac_md5, hmac_sha1)
+import Crypto.HMAC
+import Crypto.Hash.MD5
+import Crypto.Hash.SHA1
 import Data.List (intercalate)
 import Data.List.Split (splitOn)
 import Network
 import OpenSSL.BN (randIntegerOneToNMinusOne)
 import System.IO
 import System.Random
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
+import qualified Data.Serialize as S
 
 import SSH.Channel
 import SSH.Crypto
@@ -48,11 +52,14 @@ supportedCiphers =
 
 supportedMACs :: [(String, LBS.ByteString -> HMAC)]
 supportedMACs =
-    [ ("hmac-sha1", makeHMAC 20 hmac_sha1)
-    , ("hmac-md5", makeHMAC 16 hmac_md5)
+    [ ("hmac-sha1", makeHMAC 20)
+    , ("hmac-md5", makeHMAC 16)
     ]
   where
-    makeHMAC s f k = HMAC s $ LBS.pack . f (LBS.unpack . LBS.take (fromIntegral s) $ k) . LBS.unpack
+    makeHMAC 20 k = HMAC 20 $ \b -> bsToLBS . S.runPut $ S.put (hmac (MacKey (strictLBS (LBS.take 20 k))) b :: SHA1)
+    makeHMAC 16 k = HMAC 16 $ \b -> bsToLBS . S.runPut $ S.put (hmac (MacKey (strictLBS (LBS.take 16 k))) b :: MD5)
+
+    bsToLBS = LBS.fromChunks . (: [])
 
 supportedCompression :: String
 supportedCompression = "none"
@@ -73,7 +80,7 @@ waitLoop sc cc s = do
     io $ hSetBinaryMode handle True
 
     dump ("got connection from", hostName, port)
-    
+
     forkIO $ do
         -- send SSH server version
         hPutStr handle (version ++ "\r\n")
@@ -235,8 +242,8 @@ kexDHInit = do
     send $
         Prepare
             oc
-            (head . toBlocks (cKeySize oc) $ skey)
-            (head . toBlocks (cBlockSize oc) $ siv)
+            (strictLBS $ LBS.take (fromIntegral $ cKeySize oc) $ skey)
+            (strictLBS $ LBS.take (fromIntegral $ cBlockSize oc) $ siv)
             (om sinteg)
 
     modify (\(GotKEXInit c cc h s p _ _ is _ _ ic _ im) ->
@@ -252,8 +259,8 @@ kexDHInit = do
             , ssInSeq = is
             , ssInCipher = ic
             , ssInHMAC = im cinteg
-            , ssInKey = head . toBlocks (cKeySize ic) $ ckey
-            , ssInVector = head . toBlocks (cBlockSize ic) $ civ
+            , ssInKey = strictLBS $ LBS.take (fromIntegral $ cKeySize ic) $ ckey
+            , ssInVector = strictLBS $ LBS.take (fromIntegral $ cBlockSize ic) $ civ
             , ssUser = Nothing
             })
 
