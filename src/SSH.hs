@@ -69,6 +69,9 @@ start sc cc p = withSocketsDo $ do
 waitLoop :: SessionConfig -> ChannelConfig -> Socket -> IO ()
 waitLoop sc cc s = do
     (handle, hostName, port) <- accept s
+
+    io $ hSetBinaryMode handle True
+
     dump ("got connection from", hostName, port)
     
     forkIO $ do

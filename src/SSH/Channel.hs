@@ -237,6 +237,8 @@ spawnProcess cmd = do
 
     -- redirect stdout and stderr, using a channel to signal completion
     done <- io newChan
+    io $ hSetBinaryMode stdout True
+    io $ hSetBinaryMode stderr True
     redirectHandle done (byte 94 >> long target) stdout
     redirectHandle done (byte 95 >> long target >> long 1) stderr
 
