@@ -14,8 +14,10 @@ fromLBS = map (toEnum . fromIntegral) . LBS.unpack
 strictLBS :: LBS.ByteString -> BS.ByteString
 strictLBS = BS.concat . LBS.toChunks
 
+powersOf :: Integral a => a -> [a]
 powersOf n = 1 : (map (*n) (powersOf n))
 
+toBase :: Integral a => a -> a -> [Word8]
 toBase x =
    map fromIntegral .
    reverse .
@@ -23,7 +25,7 @@ toBase x =
    takeWhile (/=0) .
    iterate (flip div x)
 
-toOctets :: (Integral a, Integral b) => a -> b -> [Word8]
+toOctets :: Int -> Integer -> [Word8]
 toOctets n x = (toBase n . fromIntegral) x
 
 fromOctets :: (Integral a, Integral b) => a -> [Word8] -> b
@@ -32,7 +34,7 @@ fromOctets n x =
    sum $
    zipWith (*) (powersOf n) (reverse (map fromIntegral x))
 
-i2osp :: Integral a => Int -> a -> [Word8]
+i2osp :: Int -> Integer -> [Word8]
 i2osp l y =
    pad ++ z
       where

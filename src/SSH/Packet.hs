@@ -1,12 +1,10 @@
 module SSH.Packet where
 
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Writer
+import Control.Monad.Writer
 import Data.Binary (encode)
 import Data.Bits ((.&.))
 import Data.Digest.Pure.SHA
 import Data.Word
-import System.IO
 import qualified Data.ByteString.Lazy as LBS
 
 import SSH.Util

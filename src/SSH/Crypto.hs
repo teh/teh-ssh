@@ -1,9 +1,7 @@
 module SSH.Crypto where
 
-import Control.Monad (replicateM)
-import Control.Monad.Trans.State
+import Control.Monad.State
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
-import Data.Int
 import qualified Codec.Crypto.RSA as RSA
 import qualified Data.ByteString.Lazy as LBS
 import qualified OpenSSL.DSA as DSA
@@ -70,12 +68,12 @@ fromBlocks :: [LBS.ByteString] -> LBS.ByteString
 fromBlocks = LBS.concat
 
 modexp :: Integer -> Integer -> Integer -> Integer
-modexp x e n = modexp' x e n 1
+modexp x' e' n' = modexp' x' e' n' 1
   where
     modexp' _ 0 _ y = y
     modexp' z e n y
-        | e `mod` 2 == 1 = modexp' ((z ^ 2) `mod` n) (e `div` 2) n (y * z `mod` n)
-        | otherwise = modexp' ((z ^ 2) `mod` n) (e `div` 2) n y
+        | e `mod` 2 == 1 = modexp' ((z ^ (2 :: Integer)) `mod` n) (e `div` 2) n (y * z `mod` n)
+        | otherwise = modexp' ((z ^ (2 :: Integer)) `mod` n) (e `div` 2) n y
 
 blob :: PublicKey -> LBS.ByteString
 blob (RSAPublicKey e n) = doPacket $ do
@@ -119,3 +117,4 @@ sign (DSAKeyPair (DSAPublicKey p q g y) x) m = do
         ]
   where
     digest = strictLBS . bytestringDigest . sha1 $ m
+sign x l = error ("cannot sign: " ++ show (x, l))
