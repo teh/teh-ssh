@@ -1,6 +1,6 @@
 module SSH.NetReader where
 
-import Control.Monad.State
+import Control.Monad.Trans.State
 import Data.Binary (decode)
 import Data.Int
 import Data.Word

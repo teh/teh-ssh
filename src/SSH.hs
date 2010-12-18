@@ -2,7 +2,8 @@ module SSH where
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
-import Control.Monad.State
+import Control.Monad (replicateM)
+import Control.Monad.Trans.State
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
 import Crypto.Classes (Hash)
 import Crypto.HMAC

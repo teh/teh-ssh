@@ -2,7 +2,8 @@
 module SSH.Session where
 
 import Control.Concurrent.Chan
-import Control.Monad.State
+import Control.Monad.IO.Class
+import Control.Monad.Trans.State
 import Data.Binary (decode, encode)
 import Data.Word
 import System.IO

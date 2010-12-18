@@ -3,7 +3,8 @@ module SSH.Channel where
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
-import Control.Monad.State
+import Control.Monad (when)
+import Control.Monad.Trans.State
 import Data.Word
 import System.Exit
 import System.IO

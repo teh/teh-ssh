@@ -1,6 +1,7 @@
 module SSH.Packet where
 
-import Control.Monad.Writer
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Writer
 import Data.Binary (encode)
 import Data.Bits ((.&.))
 import Data.Digest.Pure.SHA

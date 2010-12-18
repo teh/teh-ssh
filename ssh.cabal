@@ -51,10 +51,11 @@ library
                     crypto-api,
                     cryptohash,
                     HsOpenSSL >= 0.8,
-                    mtl,
                     network,
                     process,
                     RSA,
                     random,
                     SHA,
-                    SimpleAES
+                    SimpleAES,
+                    split,
+                    transformers

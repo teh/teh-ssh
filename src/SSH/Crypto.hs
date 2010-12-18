@@ -1,6 +1,7 @@
 module SSH.Crypto where
 
-import Control.Monad.State
+import Control.Monad (replicateM)
+import Control.Monad.Trans.State
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
 import qualified Codec.Crypto.RSA as RSA
 import qualified Data.ByteString.Lazy as LBS
