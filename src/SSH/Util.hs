@@ -25,7 +25,7 @@ toBase x =
    takeWhile (/=0) .
    iterate (flip div x)
 
-toOctets :: Int -> Integer -> [Word8]
+toOctets :: (Integral a, Integral b) => a -> b -> [Word8]
 toOctets n x = (toBase n . fromIntegral) x
 
 fromOctets :: (Integral a, Integral b) => a -> [Word8] -> b
@@ -34,7 +34,7 @@ fromOctets n x =
    sum $
    zipWith (*) (powersOf n) (reverse (map fromIntegral x))
 
-i2osp :: Int -> Integer -> [Word8]
+i2osp :: Integral a => Int -> a -> [Word8]
 i2osp l y =
    pad ++ z
       where
