@@ -14,10 +14,8 @@ fromLBS = map (toEnum . fromIntegral) . LBS.unpack
 strictLBS :: LBS.ByteString -> BS.ByteString
 strictLBS = BS.concat . LBS.toChunks
 
-powersOf :: Integral a => a -> [a]
 powersOf n = 1 : (map (*n) (powersOf n))
 
-toBase :: Integral a => a -> a -> [Word8]
 toBase x =
    map fromIntegral .
    reverse .

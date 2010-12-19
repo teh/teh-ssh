@@ -83,7 +83,7 @@ defaultChannelConfig =
         }
 
 newChannel :: ChannelConfig -> (SenderMessage -> IO ()) -> Word32 -> Word32 -> Word32 -> Word32 -> String -> IO (Chan ChannelMessage)
-newChannel config cssend us them winSize maxPacket user = do
+newChannel config send us them winSize maxPacket user = do
     chan <- newChan
 
     dump ("new channel", winSize, maxPacket)
@@ -100,7 +100,7 @@ newChannel config cssend us them winSize maxPacket user = do
             { csConfig = config
             , csID = us
             , csTheirID = them
-            , csSend = cssend
+            , csSend = send
             , csDataReceived = 0
             , csMaxPacket = maxPacket
             , csWindowSize = 32768 * 64
@@ -118,44 +118,42 @@ chanLoop c = do
 
     chanid <- gets csID
     case msg of
-        Request wr cr ->
-            gets (ccRequestHandler . csConfig) >>= \f -> f wr cr
-
-        Data d -> do
-            modify $ \cs -> cs
+        Request wr cr -> gets (ccRequestHandler . csConfig) >>= \f -> f wr cr
+        Data msg -> do
+            modify (\c -> c
                 { csDataReceived =
-                    csDataReceived cs + fromIntegral (LBS.length d)
-                }
+                    csDataReceived c + fromIntegral (LBS.length msg)
+                })
 
             -- Adjust window size if needed
             rcvd <- gets csDataReceived
-            maxp <- gets csMaxPacket
+            max <- gets csMaxPacket
             winSize <- gets csTheirWindowSize
-            when (rcvd + (maxp * 4) >= winSize && winSize + (maxp * 4) <= 2 ^ (32 :: Integer) - 1) $ do
-                modify (\cs -> cs { csTheirWindowSize = winSize + (maxp * 4) })
+            when (rcvd + (max * 4) >= winSize && winSize + (max * 4) <= 2^32 - 1) $ do
+                modify (\c -> c { csTheirWindowSize = winSize + (max * 4) })
                 sendPacket $ do
                     byte 93
                     long chanid
-                    long (maxp * 4)
+                    long (max * 4)
 
             -- Direct input to process's stdin
-            csproc <- gets csProcess
-            case csproc of
+            proc <- gets csProcess
+            case proc of
                 Nothing -> dump ("got unhandled data", chanid)
-                Just (Process _ pin _ _) -> do
-                    dump ("redirecting data", chanid, LBS.length d)
-                    io $ LBS.hPut pin d
-                    io $ hFlush pin
+                Just (Process _ stdin _ _) -> do
+                    dump ("redirecting data", chanid, LBS.length msg)
+                    io $ LBS.hPut stdin msg
+                    io $ hFlush stdin
         EOF -> do
-            modify (\cs -> cs { csDataReceived = 0 })
+            modify (\c -> c { csDataReceived = 0 })
 
             -- Close process's stdin to indicate EOF
-            cproc <- gets csProcess
-            case cproc of
+            proc <- gets csProcess
+            case proc of
                 Nothing -> dump ("got unhandled eof")
-                Just (Process _ pin _ _) -> do
+                Just (Process _ stdin _ _) -> do
                     dump ("redirecting eof", chanid)
-                    io $ hClose pin
+                    io $ hClose stdin
 
 
     chanLoop c
@@ -201,8 +199,11 @@ redirectHandle :: Chan () -> Packet () -> Handle -> Channel ()
 redirectHandle f d h = get >>= io . forkIO . evalStateT redirectLoop >> return ()
   where
     redirectLoop = do
+        target <- gets csTheirID
+        Just (Process proc _ _ _) <- gets csProcess
+
         dump "reading..."
-        l <- io getAvailable
+        l <- io $ hGetAvailable h
         dump ("read data from handle", l)
 
         if not (null l)
@@ -215,31 +216,31 @@ redirectHandle f d h = get >>= io . forkIO . evalStateT redirectLoop >> return (
             then io $ writeChan f ()
             else redirectLoop
 
-    getAvailable :: IO String
-    getAvailable = do
+    hGetAvailable :: Handle -> IO String
+    hGetAvailable h = do
         ready <- hReady h `catch` const (return False)
         if not ready
             then return ""
             else do
                 c <- hGetChar h
-                cs <- getAvailable
+                cs <- hGetAvailable h
                 return (c:cs)
 
 spawnProcess :: IO (Handle, Handle, Handle, ProcessHandle) -> Channel ()
 spawnProcess cmd = do
     target <- gets csTheirID
 
-    (pin, pout, perr, phdl) <- io cmd
-    modify (\s -> s { csProcess = Just $ Process phdl pin pout perr })
+    (stdin, stdout, stderr, proc) <- io cmd
+    modify (\s -> s { csProcess = Just $ Process proc stdin stdout stderr })
 
     dump ("command spawned")
 
     -- redirect stdout and stderr, using a channel to signal completion
     done <- io newChan
-    io $ hSetBinaryMode pout True
-    io $ hSetBinaryMode perr True
-    redirectHandle done (byte 94 >> long target) pout
-    redirectHandle done (byte 95 >> long target >> long 1) perr
+    io $ hSetBinaryMode stdout True
+    io $ hSetBinaryMode stderr True
+    redirectHandle done (byte 94 >> long target) stdout
+    redirectHandle done (byte 95 >> long target >> long 1) stderr
 
     s <- get
 
@@ -250,7 +251,7 @@ spawnProcess cmd = do
         readChan done
 
         dump "done reading output! waiting for process..."
-        exit <- io $ waitForProcess phdl
+        exit <- io $ waitForProcess proc
         dump ("process exited", exit)
 
         flip evalStateT s $ do

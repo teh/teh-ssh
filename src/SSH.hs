@@ -5,15 +5,16 @@ import Control.Concurrent.Chan
 import Control.Monad (replicateM)
 import Control.Monad.Trans.State
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
-import Crypto.Classes (Hash)
 import Crypto.HMAC
 import Crypto.Hash.MD5
 import Crypto.Hash.SHA1
 import Data.List (intercalate)
+import Data.List.Split (splitOn)
 import Network
 import OpenSSL.BN (randIntegerOneToNMinusOne)
 import System.IO
 import System.Random
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
 import qualified Data.Serialize as S
@@ -29,7 +30,7 @@ import SSH.Util
 
 
 version :: String
-version = "SSH-2.0-Haskell"
+version = "SSH-2.0-DarcsDen"
 
 supportedKeyExchanges :: [String]
 supportedKeyExchanges =
@@ -55,16 +56,8 @@ supportedMACs =
     , ("hmac-md5", makeHMAC 16)
     ]
   where
-    makeHMAC :: Int -> LBS.ByteString -> HMAC
-    makeHMAC 20 k = HMAC 20 $ \b -> runHmac (doHMAC 20 k b :: SHA1)
-    makeHMAC 16 k = HMAC 16 $ \b -> runHmac (doHMAC 16 k b :: MD5)
-    makeHMAC u k = error ("unknown key size: " ++ show (u, k))
-
-    doHMAC :: Hash c d => Int -> LBS.ByteString -> LBS.ByteString -> d
-    doHMAC s k b = hmac (MacKey (strictLBS (LBS.take (fromIntegral s) k))) b
-
-    runHmac :: Hash c d => d -> LBS.ByteString
-    runHmac = bsToLBS . S.runPut . S.put
+    makeHMAC 20 k = HMAC 20 $ \b -> bsToLBS . S.runPut $ S.put (hmac (MacKey (strictLBS (LBS.take 20 k))) b :: SHA1)
+    makeHMAC 16 k = HMAC 16 $ \b -> bsToLBS . S.runPut $ S.put (hmac (MacKey (strictLBS (LBS.take 16 k))) b :: MD5)
 
     bsToLBS = LBS.fromChunks . (: [])
 
@@ -176,18 +169,10 @@ readLoop = do
     modify (\s -> s { ssInSeq = ssInSeq s + 1 })
     readLoop
 
-wordsBy :: Char -> String -> [String]
-wordsBy = wordsBy' ""
-  where
-    wordsBy' _ _ "" = []
-    wordsBy' acc x (c:cs)
-        | x == c = acc : wordsBy' "" x cs
-        | otherwise = wordsBy' (acc ++ [c]) x cs
-
 kexInit :: Session ()
 kexInit = do
     cookie <- net $ readBytes 16
-    nameLists <- replicateM 10 (net readLBS) >>= return . map (wordsBy ',' . fromLBS)
+    nameLists <- replicateM 10 (net readLBS) >>= return . map (splitOn "," . fromLBS)
     kpf <- net readByte
     dummy <- net readULong
 

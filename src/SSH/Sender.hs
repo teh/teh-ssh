@@ -2,6 +2,7 @@ module SSH.Sender where
 
 import Control.Concurrent.Chan
 import Control.Monad (replicateM)
+import Data.LargeWord
 import Data.Word
 import System.IO
 import System.Random
@@ -58,7 +59,7 @@ sender ms ss = do
             let f = full msg pad
 
             case ss of
-                GotKeys h os True cipher key iv (HMAC _ mac) -> do
+                GotKeys h os True cipher key iv hmac@(HMAC _ mac) -> do
                     dump ("sending encrypted", os, f)
                     let (encrypted, newVector) = encrypt cipher key iv f
                     LBS.hPut h . LBS.concat $
@@ -101,7 +102,7 @@ sender ms ss = do
             else paddingNeeded msg
 
 encrypt :: Cipher -> BS.ByteString -> BS.ByteString -> LBS.ByteString -> (LBS.ByteString, BS.ByteString)
-encrypt (Cipher AES CBC bs _) key vector m =
+encrypt (Cipher AES CBC bs ks) key vector m =
     ( fromBlocks encrypted
     , case encrypted of
           (_:_) -> strictLBS (last encrypted)
