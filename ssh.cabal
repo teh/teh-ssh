@@ -27,6 +27,11 @@ source-repository   head
 library
   hs-source-dirs:   src
 
+  if impl(ghc >= 6.12)
+    ghc-options:   -Wall -fno-warn-unused-do-bind
+  else
+    ghc-options:   -Wall
+
   exposed-modules:  SSH,
                     SSH.Channel,
                     SSH.Crypto,

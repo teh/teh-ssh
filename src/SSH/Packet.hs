@@ -6,7 +6,6 @@ import Data.Binary (encode)
 import Data.Bits ((.&.))
 import Data.Digest.Pure.SHA
 import Data.Word
-import System.IO
 import qualified Data.ByteString.Lazy as LBS
 
 import SSH.Util

@@ -14,8 +14,10 @@ fromLBS = map (toEnum . fromIntegral) . LBS.unpack
 strictLBS :: LBS.ByteString -> BS.ByteString
 strictLBS = BS.concat . LBS.toChunks
 
+powersOf :: Num a => a -> [a]
 powersOf n = 1 : (map (*n) (powersOf n))
 
+toBase :: (Integral a, Num b) => a -> a -> [b]
 toBase x =
    map fromIntegral .
    reverse .
@@ -37,5 +39,5 @@ i2osp l y =
    pad ++ z
       where
          pad = replicate (l - unPaddedLen) (0x00::Word8)
-	 z = toOctets 256 y
+	 z = toOctets (256 :: Integer) y
 	 unPaddedLen = length z

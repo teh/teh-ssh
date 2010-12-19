@@ -5,7 +5,6 @@ import Control.Concurrent.Chan
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import Data.Binary (decode, encode)
-import Data.LargeWord
 import Data.Word
 import System.IO
 import qualified Codec.Crypto.SimpleAES as A
@@ -121,7 +120,7 @@ decrypt m
     s <- get
     case s of
         Final
-            { ssInCipher = Cipher AES CBC bs@16 ks
+            { ssInCipher = Cipher AES CBC bs@16 _
             , ssInKey = key
             , ssInVector = vector
             } -> do

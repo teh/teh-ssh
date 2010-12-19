@@ -14,7 +14,6 @@ import Network
 import OpenSSL.BN (randIntegerOneToNMinusOne)
 import System.IO
 import System.Random
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
 import qualified Data.Serialize as S
@@ -52,12 +51,12 @@ supportedCiphers =
 
 supportedMACs :: [(String, LBS.ByteString -> HMAC)]
 supportedMACs =
-    [ ("hmac-sha1", makeHMAC 20)
-    , ("hmac-md5", makeHMAC 16)
+    [ ("hmac-sha1", makeHMAC True)
+    , ("hmac-md5", makeHMAC False)
     ]
   where
-    makeHMAC 20 k = HMAC 20 $ \b -> bsToLBS . S.runPut $ S.put (hmac (MacKey (strictLBS (LBS.take 20 k))) b :: SHA1)
-    makeHMAC 16 k = HMAC 16 $ \b -> bsToLBS . S.runPut $ S.put (hmac (MacKey (strictLBS (LBS.take 16 k))) b :: MD5)
+    makeHMAC True k = HMAC 20 $ \b -> bsToLBS . S.runPut $ S.put (hmac (MacKey (strictLBS (LBS.take 20 k))) b :: SHA1)
+    makeHMAC False k = HMAC 16 $ \b -> bsToLBS . S.runPut $ S.put (hmac (MacKey (strictLBS (LBS.take 16 k))) b :: MD5)
 
     bsToLBS = LBS.fromChunks . (: [])
 
