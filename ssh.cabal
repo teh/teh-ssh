@@ -1,5 +1,5 @@
 name:                ssh
-version:             0.2.4
+version:             0.2.5
 synopsis:            A pure-Haskell SSH server library.
 description:
     This package was split from darcsden into its own project; documentation is
@@ -43,7 +43,9 @@ library
   other-modules:    SSH.Debug,
                     SSH.Util
 
-  build-depends:    base >= 4 && < 5,
+  build-depends:    asn1-data,
+                    base >= 4 && < 5,
+                    base64-string,
                     binary,
                     bytestring,
                     cereal,

@@ -2,7 +2,10 @@ module SSH.Crypto where
 
 import Control.Monad (replicateM)
 import Control.Monad.Trans.State
+import Data.ASN1.BER
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
+import Data.List (isPrefixOf)
+import qualified Codec.Binary.Base64.String as B64
 import qualified Codec.Crypto.RSA as RSA
 import qualified Data.ByteString.Lazy as LBS
 import qualified OpenSSL.DSA as DSA
@@ -51,6 +54,37 @@ data KeyPair
         , dprivX :: Integer
         }
     deriving (Eq, Show)
+
+
+rsaKeyPairFromFile :: FilePath -> IO KeyPair
+rsaKeyPairFromFile fn = do
+    x <- readFile fn
+    let asn1
+            = B64.decode
+            . concat
+            . filter (not . ("--" `isPrefixOf`))
+            . lines
+            $ x
+
+    case decodeASN1 (toLBS asn1) of
+        Right (Sequence is) | all isIntVal is ->
+            return $ RSAKeyPair
+                { rprivPub = RSAPublicKey
+                    { rpubE = intValAt 2 is
+                    , rpubN = intValAt 1 is
+                    }
+                , rprivD = intValAt 3 is
+                }
+        Right u -> error ("unknown ASN1 decoding result: " ++ show u)
+        Left e -> error ("ASN1 decoding of private key failed: " ++ show e)
+  where
+    isIntVal (IntVal _) = True
+    isIntVal _ = False
+
+    intValAt i is =
+        case is !! i of
+            IntVal n -> n
+            x -> error ("not an IntVal: " ++ show x)
 
 generator :: Integer
 generator = 2
