@@ -317,7 +317,9 @@ userAuthRequest = do
             return False
 
         "publickey" -> do
-            0 <- net readByte
+            -- TODO: handle signatures (b will be 1)
+            b <- net readByte
+            dump ("got boolean", b)
             net readLBS
             key <- net readLBS
             auth (PublicKey (fromLBS user) (blobToKey key))
