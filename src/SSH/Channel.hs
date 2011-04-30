@@ -195,16 +195,26 @@ channelDone = do
     sendPacket (byte 96 >> long target) -- eof
     sendPacket (byte 97 >> long target) -- close
 
+sendChunks :: Integral a => a -> Packet () -> String -> Channel ()
+sendChunks _ _ "" = return ()
+sendChunks n p s = do
+    sendPacket (p >> string chunk)
+    sendChunks n p rest
+  where
+    (chunk, rest) = splitAt (fromIntegral n - packetLength p) s
+
 redirectHandle :: Chan () -> Packet () -> Handle -> Channel ()
 redirectHandle f d h = get >>= io . forkIO . evalStateT redirectLoop >> return ()
   where
     redirectLoop = do
+        maxLen <- gets csMaxPacket
+
         dump "reading..."
         l <- io $ getAvailable
         dump ("read data from handle", l)
 
         if not (null l)
-            then sendPacket $ d >> string l
+            then sendChunks maxLen d l
             else return ()
 
         done <- io $ hIsEOF h

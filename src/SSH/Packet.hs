@@ -34,6 +34,9 @@ raw = tell
 rawString :: String -> Packet ()
 rawString = tell . toLBS
 
+packetLength :: Packet () -> Int
+packetLength = fromIntegral . LBS.length . doPacket
+
 doPacket :: Packet a -> LBS.ByteString
 doPacket = execWriter
 
