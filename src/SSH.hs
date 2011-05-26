@@ -171,10 +171,11 @@ readLoop = do
     shutdownChannels = do
         s <- get
         case s of
-            Final { ssSend = sender, ssChannels = cs } -> io $ do
-                mapM_ (flip writeChan Interrupt) (M.elems cs)
-                sender Stop
-            _ -> io $ (ssSend s) Stop
+            Final { ssSend = sndr, ssChannels = cs } ->
+                mapM_ (io . flip writeChan Interrupt) (M.elems cs)
+            _ -> return ()
+
+        io $ ssSend s Stop
 
 kexInit :: Session ()
 kexInit = do
