@@ -142,7 +142,7 @@ readLoop :: Session ()
 readLoop = do
     done <- gets ssThem >>= io . hIsEOF
     if done
-        then dump "connection lost"
+        then shutdownChannels
         else do
 
     getPacket
@@ -150,7 +150,7 @@ readLoop = do
     msg <- net readByte
 
     if msg == 1 || msg == 97 -- disconnect || close
-        then dump "disconnected"
+        then shutdownChannels
         else do
 
     case msg of
@@ -167,6 +167,14 @@ readLoop = do
 
     modify (\s -> s { ssInSeq = ssInSeq s + 1 })
     readLoop
+  where
+    shutdownChannels = do
+        s <- get
+        case s of
+            Final { ssSend = sender, ssChannels = cs } -> io $ do
+                mapM_ (flip writeChan Interrupt) (M.elems cs)
+                sender Stop
+            _ -> io $ (ssSend s) Stop
 
 kexInit :: Session ()
 kexInit = do

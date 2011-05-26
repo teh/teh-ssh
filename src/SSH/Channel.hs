@@ -1,8 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module SSH.Channel where
 
-import Control.Concurrent (forkIO)
-import Control.Concurrent.Chan
+import Control.Concurrent
 import Control.Monad (when)
 import Control.Monad.Trans.State
 import Data.Word
@@ -29,12 +28,14 @@ data ChannelState =
         , csTheirWindowSize :: Word32
         , csUser :: String
         , csProcess :: Maybe Process
+        , csRedirector :: Maybe ThreadId
         }
 
 data ChannelMessage
     = Request Bool ChannelRequest
     | Data LBS.ByteString
     | EOF
+    | Interrupt
     deriving Show
 
 data ChannelConfig =
@@ -107,6 +108,7 @@ newChannel config csend us them winSize maxPacket user = do
             , csTheirWindowSize = winSize
             , csUser = user
             , csProcess = Nothing
+            , csRedirector = Nothing
             }
 
     return chan
@@ -118,7 +120,12 @@ chanLoop c = do
 
     chanid <- gets csID
     case msg of
-        Request wr cr -> gets (ccRequestHandler . csConfig) >>= \f -> f wr cr
+        Request wr cr -> do
+            handler <- gets (ccRequestHandler . csConfig)
+            handler wr cr
+
+            chanLoop c
+
         Data datum -> do
             modify $ \cs -> cs
                 { csDataReceived =
@@ -144,6 +151,9 @@ chanLoop c = do
                     dump ("redirecting data", chanid, LBS.length datum)
                     io $ LBS.hPut pin datum
                     io $ hFlush pin
+
+            chanLoop c
+
         EOF -> do
             modify $ \cs -> cs { csDataReceived = 0 }
 
@@ -155,8 +165,23 @@ chanLoop c = do
                     dump ("redirecting eof", chanid)
                     io $ hClose pin
 
+            chanLoop c
 
-    chanLoop c
+        Interrupt -> do
+            -- shut down the i/o redirecting process
+            redir <- gets csRedirector
+            case redir of
+                Nothing -> return ()
+                Just tid -> io (killThread tid)
+
+            cproc <- gets csProcess
+            case cproc of
+                Nothing -> return ()
+                Just (Process phdl _ _ _) -> do
+                    -- NOTE: this doesn't necessarily guarantee termination
+                    -- see System.Process docs
+                    io $ terminateProcess phdl
+
 
 channelError :: String -> Channel ()
 channelError msg = do
@@ -204,7 +229,10 @@ sendChunks n p s = do
     (chunk, rest) = splitAt (fromIntegral n - packetLength p) s
 
 redirectHandle :: Chan () -> Packet () -> Handle -> Channel ()
-redirectHandle f d h = get >>= io . forkIO . evalStateT redirectLoop >> return ()
+redirectHandle f d h = do
+    s <- get
+    r <- io . forkIO . evalStateT redirectLoop $ s
+    modify $ \cs -> cs { csRedirector = Just r }
   where
     redirectLoop = do
         maxLen <- gets csMaxPacket

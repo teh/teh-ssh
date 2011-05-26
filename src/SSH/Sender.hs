@@ -34,6 +34,7 @@ data SenderMessage
     = Prepare Cipher BS.ByteString BS.ByteString HMAC
     | StartEncrypting
     | Send LBS.ByteString
+    | Stop
 
 class Sender a where
     send :: SenderMessage -> a ()
@@ -45,6 +46,7 @@ sender :: Chan SenderMessage -> SenderState -> IO ()
 sender ms ss = do
     m <- readChan ms
     case m of
+        Stop -> return ()
         Prepare cipher key iv hmac -> do
             dump ("initiating encryption", key, iv)
             sender ms (GotKeys (senderThem ss) (senderOutSeq ss) False cipher key iv hmac)
