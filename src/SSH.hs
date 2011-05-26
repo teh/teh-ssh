@@ -171,7 +171,7 @@ readLoop = do
     shutdownChannels = do
         s <- get
         case s of
-            Final { ssSend = sndr, ssChannels = cs } ->
+            Final { ssChannels = cs } ->
                 mapM_ (io . flip writeChan Interrupt) (M.elems cs)
             _ -> return ()
 
