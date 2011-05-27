@@ -332,7 +332,7 @@ userAuthRequest = do
             ch <- auth (PublicKey (fromLBS user) (blobToKey key))
 
             -- if it's signed, assume it's the second one after auth
-            if b == 1
+            if ch && b == 1
                 then sendPacket userAuthOK
                 else when ch (sendPacket $ userAuthPKOK name key)
 
