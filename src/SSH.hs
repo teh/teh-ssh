@@ -2,7 +2,7 @@ module SSH where
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
-import Control.Monad (replicateM)
+import Control.Monad (replicateM, when)
 import Control.Monad.Trans.State
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
 import Crypto.HMAC
@@ -326,30 +326,40 @@ userAuthRequest = do
             return False
 
         "publickey" -> do
-            -- TODO: handle signatures (b will be 1)
             b <- net readByte
-            dump ("got boolean", b)
-            net readLBS
+            name <- net readLBS
             key <- net readLBS
-            auth (PublicKey (fromLBS user) (blobToKey key))
+            ch <- auth (PublicKey (fromLBS user) (blobToKey key))
+
+            -- if it's signed, assume it's the second one after auth
+            if b == 1
+                then sendPacket userAuthOK
+                else when ch (sendPacket $ userAuthPKOK name key)
+
+            return ch
 
         "password" -> do
             0 <- net readByte
             password <- net readLBS
-            auth (Password (fromLBS user) (fromLBS password))
+            ch <- auth (Password (fromLBS user) (fromLBS password))
+            when ch (sendPacket userAuthOK)
+            return ch
 
         u -> error $ "unhandled authorization type: " ++ u
 
     if check
-        then do
-            modify (\s -> s { ssUser = Just (fromLBS user) })
-            sendPacket userAuthOK
+        then modify (\s -> s { ssUser = Just (fromLBS user) })
         else sendPacket (userAuthFail authMethods)
   where
     userAuthFail ms = do
         byte 51
         string (intercalate "," ms)
         byte 0
+
+    userAuthPKOK name key = do
+        byte 60
+        byteString name
+        byteString key
 
     userAuthOK = byte 52
 
