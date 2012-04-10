@@ -179,8 +179,8 @@ readLoop = do
 
 kexInit :: Session ()
 kexInit = do
-    cookie <- net $ readBytes 16
-    nameLists <- replicateM 10 (net readLBS) >>= return . map (splitOn "," . fromLBS)
+    cookie <- net (readBytes 16)
+    nameLists <- fmap (map (splitOn "," . fromLBS)) (replicateM 10 (net readLBS))
     kpf <- net readByte
     dummy <- net readULong
 
@@ -191,30 +191,37 @@ kexInit = do
         imn = match (nameLists !! 4) (map fst supportedMACs)
 
     dump ("KEXINIT", theirKEXInit, ocn, icn, omn, imn)
-    modify (\(Initial c cc h s p cv sk is) ->
-        case
-            ( lookup ocn supportedCiphers
-            , lookup icn supportedCiphers
-            , lookup omn supportedMACs
-            , lookup imn supportedMACs
-            ) of
-            (Just oc, Just ic, Just om, Just im) ->
-                GotKEXInit
-                    { ssConfig = c
-                    , ssChannelConfig = cc
-                    , ssThem = h
-                    , ssSend = s
-                    , ssPayload = p
-                    , ssTheirVersion = cv
-                    , ssOurKEXInit = sk
-                    , ssTheirKEXInit = theirKEXInit
-                    , ssOutCipher = oc
-                    , ssInCipher = ic
-                    , ssOutHMACPrep = om
-                    , ssInHMACPrep = im
-                    , ssInSeq = is
-                    }
-            _ -> error $ "impossible: lookup failed for ciphers/macs: " ++ show (ocn, icn, omn, imn))
+    modify $ \st ->
+        case st of
+            Initial c cc h s p cv sk is ->
+                case
+                    ( lookup ocn supportedCiphers
+                    , lookup icn supportedCiphers
+                    , lookup omn supportedMACs
+                    , lookup imn supportedMACs
+                    ) of
+                    (Just oc, Just ic, Just om, Just im) ->
+                        GotKEXInit
+                            { ssConfig = c
+                            , ssChannelConfig = cc
+                            , ssThem = h
+                            , ssSend = s
+                            , ssPayload = p
+                            , ssTheirVersion = cv
+                            , ssOurKEXInit = sk
+                            , ssTheirKEXInit = theirKEXInit
+                            , ssOutCipher = oc
+                            , ssInCipher = ic
+                            , ssOutHMACPrep = om
+                            , ssInHMACPrep = im
+                            , ssInSeq = is
+                            }
+                    _ ->
+                        error . concat $
+                            [ "impossible: lookup failed for ciphers/macs: "
+                            , show (ocn, icn, omn, imn)
+                            ]
+            _ -> error "impossible state transition; expected Initial"
   where
     match n h = head . filter (`elem` h) $ n
     reconstruct c nls kpf dummy = doPacket $ do
@@ -254,23 +261,31 @@ kexDHInit = do
             (strictLBS $ LBS.take (fromIntegral $ cBlockSize oc) $ siv)
             (om sinteg)
 
-    modify (\(GotKEXInit c cc h s p _ _ is _ _ ic _ im) ->
-        Final
-            { ssConfig = c
-            , ssChannelConfig = cc
-            , ssChannels = M.empty
-            , ssID = d
-            , ssThem = h
-            , ssSend = s
-            , ssPayload = p
-            , ssGotNEWKEYS = False
-            , ssInSeq = is
-            , ssInCipher = ic
-            , ssInHMAC = im cinteg
-            , ssInKey = strictLBS $ LBS.take (fromIntegral $ cKeySize ic) $ ckey
-            , ssInVector = strictLBS $ LBS.take (fromIntegral $ cBlockSize ic) $ civ
-            , ssUser = Nothing
-            })
+    modify $ \st ->
+        case st of
+            GotKEXInit c cc h s p _ _ is _ _ ic _ im ->
+                Final
+                    { ssConfig = c
+                    , ssChannelConfig = cc
+                    , ssChannels = M.empty
+                    , ssID = d
+                    , ssThem = h
+                    , ssSend = s
+                    , ssPayload = p
+                    , ssGotNEWKEYS = False
+                    , ssInSeq = is
+                    , ssInCipher = ic
+                    , ssInHMAC = im cinteg
+                    , ssInKey =
+                        strictLBS $ LBS.take (fromIntegral $ cKeySize ic) $ ckey
+                    , ssInVector =
+                        strictLBS $ LBS.take (fromIntegral $ cBlockSize ic) $ civ
+                    , ssUser = Nothing
+                    }
+
+            _ -> error "impossible state transition; expected GotKEXInit"
+
+
 
     signed <- io $ sign keyPair d
     let reply = doPacket (kexDHReply f signed pub)
