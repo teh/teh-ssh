@@ -11,6 +11,8 @@ import qualified Codec.Crypto.RSA as RSA
 import qualified Data.ByteString.Lazy as LBS
 import qualified OpenSSL.DSA as DSA
 
+import qualified Crypto.Types.PubKey.RSA as RSAKey
+
 import SSH.Packet
 import SSH.NetReader
 import SSH.Util
@@ -142,7 +144,7 @@ blobToKey s = flip evalState s $ do
 sign :: KeyPair -> LBS.ByteString -> IO LBS.ByteString
 sign (RSAKeyPair (RSAPublicKey _ n) d) m = return $ LBS.concat
     [ netString "ssh-rsa"
-    , netLBS (RSA.rsassa_pkcs1_v1_5_sign RSA.ha_SHA1 (RSA.PrivateKey 256 n d) m)
+    , netLBS (RSA.rsassa_pkcs1_v1_5_sign RSA.ha_SHA1 (RSAKey.PrivateKey 256 n d 0 0 0 0 0) m)
     ]
 sign (DSAKeyPair (DSAPublicKey p q g y) x) m = do
     (r, s) <- DSA.signDigestedDataWithDSA (DSA.tupleToDSAKeyPair (p, q, g, y, x)) digest
