@@ -1,5 +1,5 @@
 name:                ssh
-version:             0.2.9
+version:             0.2.10
 synopsis:            A pure-Haskell SSH server library.
 description:
     This package was split from darcsden into its own project; documentation
