@@ -178,10 +178,12 @@ chanLoop c = do
             cproc <- gets csProcess
             case cproc of
                 Nothing -> return ()
-                Just (Process phdl _ _ _) -> do
+                Just (Process phdl pin _ _) -> do
                     -- NOTE: this doesn't necessarily guarantee termination
                     -- see System.Process docs
-                    io $ terminateProcess phdl
+                    io $ do
+                      io $ hClose pin -- this is necessary too, #46
+                      terminateProcess phdl
 
 
 channelError :: String -> Channel ()
