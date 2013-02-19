@@ -2,6 +2,7 @@
 module SSH.Channel where
 
 import Control.Concurrent
+import Control.Exception
 import Control.Monad (when)
 import Control.Monad.Trans.State
 import Data.Word
@@ -253,7 +254,7 @@ redirectHandle f d h = do
 
     getAvailable :: IO String
     getAvailable = do
-        ready <- hReady h `catch` const (return False)
+        ready <- hReady h `Control.Exception.catch` (const (return False) :: IOException -> IO Bool)
         if not ready
             then return ""
             else do
