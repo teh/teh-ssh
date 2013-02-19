@@ -181,9 +181,8 @@ chanLoop c = do
                 Just (Process phdl pin _ _) -> do
                     -- NOTE: this doesn't necessarily guarantee termination
                     -- see System.Process docs
-                    io $ do
-                      io $ hClose pin -- this is necessary too, #46
-                      terminateProcess phdl
+                    -- nb closing stdin seems necessary, or process won't die
+                    io (hClose pin >> terminateProcess phdl)
 
 
 channelError :: String -> Channel ()
