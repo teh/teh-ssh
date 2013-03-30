@@ -22,7 +22,7 @@ stability:           Unstable
 
 source-repository   head
     type:           darcs
-    location:       http://darcsden.com/alex/ssh
+    location:       http://hub.darcs.net/simon/ssh
 
 library
   hs-source-dirs:   src
