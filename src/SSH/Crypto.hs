@@ -2,7 +2,8 @@ module SSH.Crypto where
 
 import Control.Monad (replicateM)
 import Control.Monad.Trans.State
-import Data.ASN1.BER (decodeASN1Stream)
+import Data.ASN1.BinaryEncoding (BER(..))
+import Data.ASN1.Encoding (decodeASN1)
 import Data.ASN1.Stream
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
 import Data.List (isPrefixOf)
@@ -69,7 +70,7 @@ rsaKeyPairFromFile fn = do
             . lines
             $ x
 
-    case decodeASN1Stream (toLBS asn1) of
+    case decodeASN1 BER (toLBS asn1) of
         Right (Start Sequence:ss)
             | all isIntVal (fst $ getConstructedEnd 0 ss) ->
             let (is, _) = getConstructedEnd 0 ss
