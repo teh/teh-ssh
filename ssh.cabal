@@ -19,6 +19,7 @@ category:            Network
 build-type:          Simple
 cabal-version:       >= 1.6
 stability:           Unstable
+tested-with:         GHC==7.6.3
 
 source-repository   head
     type:           darcs
