@@ -1,0 +1,3 @@
+0.2.12.1
+
+  * allow cryptohash > 0.10 as well as older versions
