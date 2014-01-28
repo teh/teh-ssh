@@ -6,8 +6,7 @@ import Control.Monad (replicateM, when)
 import Control.Monad.Trans.State
 import Data.Digest.Pure.SHA (bytestringDigest, sha1)
 import Crypto.HMAC
-import Crypto.Hash.MD5
-import Crypto.Hash.SHA1
+import Crypto.Hash.CryptoAPI
 import Data.List (intercalate)
 import Data.List.Split (splitOn)
 import Network
