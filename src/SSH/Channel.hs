@@ -8,7 +8,8 @@ import Control.Monad.Trans.State
 import Data.Word
 import System.Exit
 import System.IO
-import System.Process
+import System.Process (ProcessHandle(..), runInteractiveCommand,
+                       terminateProcess, waitForProcess,)
 import qualified Data.ByteString.Lazy as LBS
 
 import SSH.Debug
