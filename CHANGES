@@ -1,3 +1,7 @@
+0.2.13.1 2014/10/8
+
+* changelog fix
+
 0.2.13 2014/10/8
 
 * build with process 1.2.*
@@ -21,6 +25,11 @@
 * when a connection is interrupted, close the subprocess's stdin too, otherwise it hangs around
 * update for more recent catch api
 * update project info
+
+0.2.10 2012/7/9 Guillaume Hoffman
+
+* bump asn1-data dependency, seems to fix darcsden build
+* fix building with dependency RSA 1.2
 
 0.2.9 2012/4/11
 
