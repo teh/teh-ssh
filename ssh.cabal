@@ -1,5 +1,5 @@
 name:                ssh
-version:             0.2.13
+version:             0.2.13.1
 synopsis:            A pure-Haskell SSH server library.
 description:
     This a library for implementing your own servers that handle SSH
