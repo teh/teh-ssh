@@ -18,7 +18,7 @@ category:            Network
 build-type:          Simple
 cabal-version:       >= 1.6
 stability:           Unstable
-tested-with:         GHC==7.6.3
+tested-with:         GHC==7.8.2
 data-files:          CHANGES,
                      README
 
@@ -28,11 +28,7 @@ source-repository   head
 
 library
   hs-source-dirs:   src
-
-  if impl(ghc >= 6.12)
-    ghc-options:   -Wall -fno-warn-unused-do-bind
-  else
-    ghc-options:   -Wall
+  ghc-options:   -Wall -fno-warn-unused-do-bind
 
   exposed-modules:  SSH,
                     SSH.Channel,
