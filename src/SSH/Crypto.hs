@@ -145,7 +145,7 @@ blobToKey s = flip evalState s $ do
 sign :: KeyPair -> LBS.ByteString -> IO LBS.ByteString
 sign (RSAKeyPair (RSAPublicKey e n) d) m = return $ LBS.concat
     [ netString "ssh-rsa"
-    , netLBS (RSA.rsassa_pkcs1_v1_5_sign RSA.ha_SHA1 (RSAKey.PrivateKey (RSAKey.PublicKey 256 n e) d 0 0 0 0 0) m)
+    , netLBS (RSA.rsassa_pkcs1_v1_5_sign RSA.hashSHA1 (RSAKey.PrivateKey (RSAKey.PublicKey 256 n e) d 0 0 0 0 0) m)
     ]
 sign (DSAKeyPair (DSAPublicKey p q g y) x) m = do
     (r, s) <- DSA.signDigestedDataWithDSA (DSA.tupleToDSAKeyPair (p, q, g, y, x)) digest

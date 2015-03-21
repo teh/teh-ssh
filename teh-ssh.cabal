@@ -1,7 +1,13 @@
-name:                ssh
+name:                teh-ssh
 version:             0.2.13.1
 synopsis:            A pure-Haskell SSH server library.
 description:
+    @Note@: Converted from darcs to git. Original here:
+    http://hub.darcs.net/simon/ssh/
+
+    Also started making some changes, e.g. moved to RSA version 2.0+,
+    and added some simple tests.
+
     This a library for implementing your own servers that handle SSH
     requests and authorization, etc. Similar to Python's Twisted Conch
     library. It's used eg by darcsden to provide basic SSH access.
@@ -9,22 +15,22 @@ description:
     This package receives only basic maintenance; if you'd like to
     take it over, please contact the current maintainer.
 
-homepage:            http://hub.darcs.net/simon/ssh
+homepage:            https://github.com/teh/ssh
 license:             BSD3
 license-file:        LICENSE
 author:              Alex Suraci <suraci.alex@gmail.com>
 maintainer:          Simon Michael <simon@joyful.com>
 category:            Network
 build-type:          Simple
-cabal-version:       >= 1.6
+cabal-version:       >=1.10
 stability:           Unstable
 tested-with:         GHC==7.8.2
 data-files:          CHANGES,
                      README
 
 source-repository   head
-    type:           darcs
-    location:       http://hub.darcs.net/simon/ssh
+    type:           git
+    location:       https://github.com/teh/ssh
 
 library
   hs-source-dirs:   src
@@ -54,9 +60,19 @@ library
                     HsOpenSSL >= 0.8,
                     network,
                     process,
-                    RSA >= 1.2 && < 1.3,
+                    RSA >= 2.0,
                     random,
                     SHA,
                     SimpleAES,
                     split,
                     transformers
+
+test-suite teh-ssh-tests
+  type:             exitcode-stdio-1.0
+  main-is:          TestSSH.hs
+  hs-source-dirs:   tests
+  build-depends:     base >= 4.0 && < 5
+                   , teh-ssh
+                   , tasty
+                   , tasty-hunit
+                   , containers
