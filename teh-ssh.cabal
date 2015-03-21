@@ -76,3 +76,7 @@ test-suite teh-ssh-tests
                    , tasty
                    , tasty-hunit
                    , containers
+                   , network >= 2.0
+                   , turtle
+                   , text
+                   , foldl
